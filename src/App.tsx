@@ -218,10 +218,10 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 text-center md:text-left">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">School Enrollment</h1>
-            <p className="text-slate-500 font-medium">Digital attendance & enrollment management</p>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight">नवीन नामांकन 2026-27</h1>
+            <p className="text-indigo-600 font-semibold tracking-wide mt-1">Student Enrollment Management</p>
           </div>
           {message && (
             <motion.div
