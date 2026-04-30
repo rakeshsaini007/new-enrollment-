@@ -316,7 +316,7 @@ export default function App() {
             <AnimatePresence mode="popLayout">
               {visibleClasses.map(num => {
                 const className = `Class ${num}`;
-                const fields: EnrollmentField[] = num === 1 
+                const fields: EnrollmentField[] = (num === 1 || (formData['School Type'] === 'UPS' && num === 6))
                   ? [`Class ${num} New Enrolled` as EnrollmentField]
                   : [`Class ${num} New Enrolled` as EnrollmentField, `Class ${num} Old Enrolled` as EnrollmentField];
                 
