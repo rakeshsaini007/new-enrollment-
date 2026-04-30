@@ -1,0 +1,6 @@
+{
+  "name": "School Enrollment Tracker",
+  "description": "A smart enrollment management system for schools to track and update student data via Google Sheets.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
