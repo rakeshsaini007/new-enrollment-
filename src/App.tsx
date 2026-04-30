@@ -249,7 +249,7 @@ export default function App() {
                   </div>
                   <input
                     type="text"
-                    placeholder="Enter school UDISE code..."
+                    placeholder="Enter school UDISE code without Zero"
                     value={formData['Udise Code']}
                     onChange={(e) => handleInputChange('Udise Code', e.target.value)}
                     onBlur={handleFetch}
@@ -360,15 +360,6 @@ export default function App() {
           )}
         </form>
       </div>
-
-      <footer className="max-w-4xl mx-auto py-12 text-center text-slate-400">
-        <div className="flex items-center justify-center gap-4 mb-2">
-          <div className="h-px w-8 bg-slate-200" />
-          <p className="text-xs font-bold uppercase tracking-[0.2em]">Deployment Info</p>
-          <div className="h-px w-8 bg-slate-200" />
-        </div>
-        <p className="text-xs">Ensure your Google Apps Script is deployed as a Web App with 'Anyone' access.</p>
-      </footer>
     </div>
   );
 }
