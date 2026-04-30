@@ -6,6 +6,10 @@ import { Search, School, MapPin, GraduationCap, Calculator, Save, RefreshCw, Ale
 // Replace this with your actual Google Apps Script web app URL after deployment
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzvMO-ateg4cPhR9Kz0E2GDqMZEtr1-Cm-9NnNvn3dNNWwq7A9UC66gU53bL-jDS2UR/exec';
 
+function normalizeKey(str: string) {
+  return str.toString().trim().replace(/\s+/g, ' ');
+}
+
 interface SchoolData {
   'Udise Code': string;
   'School Name': string;
@@ -63,50 +67,27 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  // Auto-calculate Totals
-  useEffect(() => {
+  // Derived Totals
+  const totals = useMemo(() => {
     const newEnrolledKeys: EnrollmentField[] = [
-      'Class 1 New Enrolled',
-      'Class 2 New Enrolled',
-      'Class 3 New Enrolled',
-      'Class 4 New Enrolled',
-      'Class 5 New Enrolled',
-      'Class 6 New Enrolled',
-      'Class 7 New Enrolled',
-      'Class 8 New Enrolled',
+      'Class 1 New Enrolled', 'Class 2 New Enrolled', 'Class 3 New Enrolled', 
+      'Class 4 New Enrolled', 'Class 5 New Enrolled', 'Class 6 New Enrolled', 
+      'Class 7 New Enrolled', 'Class 8 New Enrolled',
     ];
-
-    const allEnrolledKeys: EnrollmentField[] = [
-      ...newEnrolledKeys,
-      'Class 2 Old Enrolled',
-      'Class 3 Old Enrolled',
-      'Class 4 Old Enrolled',
-      'Class 5 Old Enrolled',
-      'Class 6 Old Enrolled',
-      'Class 7 Old Enrolled',
+    const oldEnrolledKeys: EnrollmentField[] = [
+      'Class 2 Old Enrolled', 'Class 3 Old Enrolled', 'Class 4 Old Enrolled', 
+      'Class 5 Old Enrolled', 'Class 6 Old Enrolled', 'Class 7 Old Enrolled', 
       'Class 8 Old Enrolled',
     ];
 
     const totalNew = newEnrolledKeys.reduce((sum, key) => sum + (Number(formData[key]) || 0), 0);
-    const totalAll = allEnrolledKeys.reduce((sum, key) => sum + (Number(formData[key]) || 0), 0);
-
-    setFormData(prev => ({
-      ...prev,
-      'Total New Enrolled': totalNew,
-      'Total Enrolled': totalAll
-    }));
-  }, [
-    formData['Class 1 New Enrolled'], formData['Class 2 New Enrolled'], formData['Class 2 Old Enrolled'],
-    formData['Class 3 New Enrolled'], formData['Class 3 Old Enrolled'], formData['Class 4 New Enrolled'],
-    formData['Class 4 Old Enrolled'], formData['Class 5 New Enrolled'], formData['Class 5 Old Enrolled'],
-    formData['Class 6 New Enrolled'], formData['Class 6 Old Enrolled'], formData['Class 7 New Enrolled'],
-    formData['Class 7 Old Enrolled'], formData['Class 8 New Enrolled'], formData['Class 8 Old Enrolled']
-  ]);
+    const totalAll = totalNew + oldEnrolledKeys.reduce((sum, key) => sum + (Number(formData[key]) || 0), 0);
+    
+    return { totalNew, totalAll };
+  }, [formData]);
 
   const handleFetch = async () => {
-    if (!formData['Udise Code']) {
-      return;
-    }
+    if (!formData['Udise Code']) return;
 
     setIsLoading(true);
     setMessage(null);
@@ -116,14 +97,21 @@ export default function App() {
       const result = await response.json();
 
       if (result.success) {
-        // Map fetched data, ensuring numbers are numbers
         const fetchedData = result.data;
-        const mappedData: any = { ...INITIAL_STATE };
+        const mappedData: any = { ...INITIAL_STATE, 'Udise Code': formData['Udise Code'] };
         
-        Object.keys(fetchedData).forEach(key => {
-          if (key in INITIAL_STATE) {
-            const val = fetchedData[key];
-            mappedData[key] = (typeof INITIAL_STATE[key as keyof SchoolData] === 'number') 
+        // Use normalized names for INITIAL_STATE matching
+        const stateKeys = Object.keys(INITIAL_STATE).map(k => normalizeKey(k));
+        const originalStateKeys = Object.keys(INITIAL_STATE);
+
+        Object.keys(fetchedData).forEach(rawKey => {
+          const nKey = normalizeKey(rawKey);
+          const index = stateKeys.indexOf(nKey);
+          
+          if (index > -1) {
+            const actualKey = originalStateKeys[index] as keyof SchoolData;
+            const val = fetchedData[rawKey];
+            mappedData[actualKey] = (typeof INITIAL_STATE[actualKey] === 'number') 
               ? Number(val) || 0 
               : val;
           }
@@ -133,14 +121,13 @@ export default function App() {
         setIsUpdating(true);
         setMessage({ text: 'School data fetched successfully!', type: 'success' });
       } else {
-        // If not found, reset others but keep UDISE
         setFormData(prev => ({ ...INITIAL_STATE, 'Udise Code': prev['Udise Code'] }));
         setIsUpdating(false);
         setMessage({ text: result.message || 'No existing data found.', type: 'error' });
       }
     } catch (error) {
       console.error(error);
-      setMessage({ text: 'Connect your Apps Script to start syncing.', type: 'error' });
+      setMessage({ text: 'Error connecting to sheet. Verify Script URL & Deployment.', type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -151,12 +138,19 @@ export default function App() {
     setIsSubmitting(true);
     setMessage(null);
 
+    // Merge totals into payload before sending
+    const payload = {
+      ...formData,
+      'Total New Enrolled': totals.totalNew,
+      'Total Enrolled': totals.totalAll
+    };
+
     try {
       await fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
       
       setMessage({ 
@@ -338,14 +332,14 @@ export default function App() {
                   <span className="text-indigo-200 text-[10px] font-bold uppercase tracking-wider block">Total New</span>
                   <div className="text-3xl font-bold font-mono tracking-tighter flex items-center gap-2">
                     <Calculator size={20} className="text-indigo-300" />
-                    {formData['Total New Enrolled']}
+                    {totals.totalNew}
                   </div>
                 </div>
                 <div className="w-px h-12 bg-white/10 hidden md:block" />
                 <div className="space-y-1">
                   <span className="text-indigo-200 text-[10px] font-bold uppercase tracking-wider block">Total Enrolled</span>
                   <div className="text-3xl font-bold font-mono tracking-tighter">
-                    {formData['Total Enrolled']}
+                    {totals.totalAll}
                   </div>
                 </div>
               </div>

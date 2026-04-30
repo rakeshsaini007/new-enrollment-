@@ -24,9 +24,17 @@
  * S: Class 8 Old Enrolled (18)
  * T: Total New Enrolled (19)
  * U: Total Enrolled (20)
+ * V: Timestamp (Optional - 21)
  */
 
 const SHEET_NAME = "Data";
+
+/**
+ * Normalizes a string by trimming and replacing multiple spaces with a single space.
+ */
+function normalizeKey(str) {
+  return str.toString().trim().replace(/\s+/g, ' ');
+}
 
 function doGet(e) {
   const udiseCode = e.parameter.udiseCode;
@@ -37,6 +45,11 @@ function doGet(e) {
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    return ContentService.createTextOutput(JSON.stringify({ error: "Sheet 'Data' not found" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   const data = sheet.getDataRange().getValues();
   const headers = data[0];
   
@@ -45,7 +58,8 @@ function doGet(e) {
     if (data[i][0].toString() === udiseCode.toString()) {
       const result = {};
       headers.forEach((header, index) => {
-        result[header] = data[i][index];
+        // We normalize the key for the JSON response so the React app can easily map it
+        result[normalizeKey(header)] = data[i][index];
       });
       return ContentService.createTextOutput(JSON.stringify({ success: true, data: result }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -59,10 +73,21 @@ function doGet(e) {
 function doPost(e) {
   try {
     const payload = JSON.parse(e.postData.contents);
+    
+    // Normalize payload keys for easy lookup
+    const normalizedPayload = {};
+    Object.keys(payload).forEach(k => {
+      normalizedPayload[normalizeKey(k)] = payload[k];
+    });
+
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(SHEET_NAME);
     const data = sheet.getDataRange().getValues();
-    const udiseCode = payload["Udise Code"];
+    const udiseCode = normalizedPayload["Udise Code"];
+
+    if (!udiseCode) {
+      throw new Error("UDISE Code is missing in payload");
+    }
 
     let rowIndex = -1;
     for (let i = 1; i < data.length; i++) {
@@ -73,7 +98,15 @@ function doPost(e) {
     }
 
     const headers = data[0];
-    const rowValues = headers.map(header => payload[header] || "");
+    const timestamp = new Date();
+    const rowValues = headers.map(header => {
+      const nHeader = normalizeKey(header);
+      // Auto-fill Timestamp if column exists
+      if (nHeader.toLowerCase() === "timestamp") {
+        return timestamp;
+      }
+      return normalizedPayload[nHeader] !== undefined ? normalizedPayload[nHeader] : "";
+    });
 
     if (rowIndex > -1) {
       // Update existing
@@ -81,8 +114,7 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({ success: true, action: "update" }))
         .setMimeType(ContentService.MimeType.JSON);
     } else {
-      // Create new (Optional based on user requirements, 
-      // but usually we append if searching for non-existent fails)
+      // Append if not found
       sheet.appendRow(rowValues);
       return ContentService.createTextOutput(JSON.stringify({ success: true, action: "create" }))
         .setMimeType(ContentService.MimeType.JSON);
