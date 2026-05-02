@@ -299,7 +299,7 @@ export default function App() {
             नवीन नामांकन <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">2026-27</span>
           </h1>
           <p className="text-slate-400 font-black uppercase tracking-[0.4em] text-[10px] md:text-xs">
-            Enter school UDISE code to manage enrollment
+            Enter school UDISE code without Zero to manage enrollment
           </p>
         </header>
 
