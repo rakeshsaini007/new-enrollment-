@@ -218,7 +218,7 @@ export default function App() {
         <div className="space-y-6">
           {fields.map(field => (
             <div key={field as string} className="space-y-2">
-              <label className="text-[10px] uppercase font-black text-white/40 tracking-widest block ml-1">
+              <label className="text-[10px] uppercase font-black text-red-400 tracking-widest block ml-1 opacity-90">
                 {field.toString().replace(className, '').trim() || 'New Enrolled'}
               </label>
               <input
