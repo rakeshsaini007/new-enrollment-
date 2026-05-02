@@ -6,7 +6,8 @@ import { Search, School, MapPin, GraduationCap, Calculator, Save, RefreshCw, Ale
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzvMO-ateg4cPhR9Kz0E2GDqMZEtr1-Cm-9NnNvn3dNNWwq7A9UC66gU53bL-jDS2UR/exec';
 
 function normalizeKey(str: string) {
-  return str.toString().trim().replace(/\s+/g, ' ');
+  if (!str) return "";
+  return str.toString().trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
 interface SchoolData {
@@ -154,18 +155,26 @@ export default function App() {
     };
 
     try {
+      // We use text/plain to avoid CORS preflight (OPTIONS) which GAS doesn't handle,
+      // but the body is still valid JSON that doPost can parse.
       await fetch(SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors', 
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
         body: JSON.stringify(payload)
       });
       
+      // Since no-cors hides the response, we assume success if no network error occurred.
+      // We also re-fetch the data to confirm it was stored.
       setMessage({ 
-        text: isUpdating ? 'Data updated successfully!' : 'Data saved successfully!', 
+        text: isUpdating ? 'Records updated!' : 'Records saved!', 
         type: 'success' 
       });
-      alert(isUpdating ? 'Data updated successfully!' : 'Data saved successfully!');
+      
+      // Briefly show an alert as requested by typical flow
+      setTimeout(() => alert(isUpdating ? 'Records successfully updated in sheet!' : 'Records successfully saved to sheet!'), 100);
     } catch (error) {
       console.error(error);
       setMessage({ text: 'Failed to save data.', type: 'error' });
@@ -376,7 +385,7 @@ export default function App() {
                 Classwise Enrollment
               </h3>
               <div className="hidden sm:block text-xs font-black text-white/60 bg-white/5 backdrop-blur-md px-6 py-3 rounded-full border border-white/10">
-                Academic Year 2026-27 Enrollment Cycle
+                FY 2026-27 Enrollment Cycle
               </div>
             </div>
             
